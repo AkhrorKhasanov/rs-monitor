@@ -30,12 +30,16 @@ async fn main() {
             Ok(resp) => {
                 let duration = start.elapsed().as_millis();
                 let status = resp.status();
-                let len = resp.content_length().unwrap_or(0);
+
+                let body_bytes = resp.bytes().await.unwrap_or_default();
+                let len = body_bytes.len(); 
+
                 let status_colored = if status.is_success() {
                     status.to_string().green()
                 } else {
                     status.to_string().red()
                 };
+
                 latencies.push(duration as f64);
                 println!(
                     "Request {}: {}ms | Status: {} | Size: {} bytes",

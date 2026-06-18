@@ -1,4 +1,5 @@
 use clap::Parser;
+use colored::*;
 use reqwest::Client;
 use std::time::Instant;
 use tokio::time::{sleep, Duration};
@@ -15,7 +16,7 @@ struct Args {
 async fn main() {
     let args = Args::parse();
 
-    println!("Mobitoring: {} ({} time(s))", args.url, args.count);
+    println!("Monitoring: {} ({} time(s))", args.url, args.count);
 
     let client = Client::new();
     let mut latencies: Vec<f64> = Vec::new();
@@ -26,11 +27,22 @@ async fn main() {
         match client.get(&args.url).send().await {
             Ok(resp) => {
                 let duration = start.elapsed().as_millis();
+                let status = resp.status();
+                let len = resp.content_length().unwrap_or(0);
+                let status_colored = if status.is_success() {
+                    status.to_string().green()
+                } else {
+                    status.to_string().red()
+                };
                 latencies.push(duration as f64);
+                println!(
+                    "Request {}: {}ms | Status: {} | Size: {} bytes",
+                    i, duration, status_colored, len
+                );
             }
             Err(_) => {
                 errors += 1;
-                println!("Request {}: Failed", i);
+                println!("Request {}: {}", i, "Failed".red().bold());
             }
         }
         if i < args.count {

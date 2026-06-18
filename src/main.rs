@@ -1,6 +1,6 @@
 use clap::Parser;
 use colored::*;
-use reqwest::{Client, ClientBuilder};
+use reqwest::ClientBuilder;
 use std::time::Instant;
 use tokio::time::{Duration, sleep};
 #[derive(Parser, Debug)]
@@ -32,7 +32,7 @@ async fn main() {
                 let status = resp.status();
 
                 let body_bytes = resp.bytes().await.unwrap_or_default();
-                let len = body_bytes.len(); 
+                let len = body_bytes.len();
 
                 let status_colored = if status.is_success() {
                     status.to_string().green()

@@ -1,8 +1,8 @@
 use clap::Parser;
 use colored::*;
-use reqwest::Client;
+use reqwest::{Client, ClientBuilder};
 use std::time::Instant;
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -15,10 +15,12 @@ struct Args {
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
-
+    let client = ClientBuilder::new()
+        .connect_timeout(Duration::from_secs(5))
+        .build()
+        .expect("Client creation failed");
     println!("Monitoring: {} ({} time(s))", args.url, args.count);
 
-    let client = Client::new();
     let mut latencies: Vec<f64> = Vec::new();
     let mut errors = 0;
 
@@ -40,9 +42,9 @@ async fn main() {
                     i, duration, status_colored, len
                 );
             }
-            Err(_) => {
+            Err(e) => {
                 errors += 1;
-                println!("Request {}: {}", i, "Failed".red().bold());
+                println!("Request {}: {} ({})", i, "Failed".red().bold(), e);
             }
         }
         if i < args.count {
@@ -52,14 +54,16 @@ async fn main() {
 
     if !latencies.is_empty() {
         let min = latencies.iter().fold(f64::INFINITY, |a, &b| f64::min(a, b));
-        let max = latencies.iter().fold(0.0, |a, &b| f64::max(a, b));
+        let max = latencies.iter().fold(f64::NEG_INFINITY, |a, &b| f64::max(a, b));
         let avg: f64 = latencies.iter().sum::<f64>() / latencies.len() as f64;
 
         println!("\n--- Statistics ---");
         println!("Min: {:.2}ms, Max: {:.2}ms, Avg: {:.2}ms", min, max, avg);
-        println!("Error Rate: {:.2}%", (errors as f64 / args.count as f64) * 100.0);
-    }   else {
+        println!(
+            "Error Rate: {:.2}%",
+            (errors as f64 / args.count as f64) * 100.0
+        );
+    } else {
         println!("No successful requests were made.");
     }
-
 }
